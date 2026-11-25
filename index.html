@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Audit Hours-Back Calculator</title>
+<meta name="description" content="Estimate the audit hours a mid-size firm could get back with Excel-native AI, discounted to a level you trust, and check a tool against 6 due-diligence questions. Based on A3C's rollout." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #F8FAFC; --surface: #FFFFFF; --ink: #0F172A; --muted: #475569; --line: #E2E8F0;
+    --cyan: #0891B2; --cyan-soft: #ECFEFF; --amber: #D97706; --amber-soft: #FFFBEB;
+    --leaf: #059669; --leaf-soft: #ECFDF5; --red: #DC2626; --red-soft: #FEF2F2;
+    --mono: 'JetBrains Mono', 'Cascadia Mono', Consolas, monospace;
+    --sans: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0B132B; --surface: #131F3D; --ink: #F8FAFC; --muted: #A5B4CB; --line: #24345C;
+      --cyan-soft: rgba(8,145,178,.16); --amber-soft: rgba(217,119,6,.16); --leaf-soft: rgba(5,150,105,.16); --red-soft: rgba(220,38,38,.16);
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--ink); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+  body { min-height: 100vh; }
+  .container { max-width: 1120px; margin: 0 auto; padding: 28px 16px 48px; }
+  header .eyebrow { font-family: var(--mono); font-size: 12px; font-weight: 700; letter-spacing: .08em; color: var(--cyan); }
+  header h1 { font-size: clamp(26px, 4.5vw, 38px); font-weight: 900; letter-spacing: -.03em; margin: 6px 0 8px; line-height: 1.1; }
+  header p { color: var(--muted); max-width: 780px; line-height: 1.55; font-size: 15.5px; }
+  .tabs { display: flex; gap: 8px; margin: 24px 0 18px; flex-wrap: wrap; }
+  .tab { font: 700 14px var(--sans); padding: 11px 16px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--surface); color: var(--muted); cursor: pointer; }
+  .tab[aria-selected="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 18px; }
+  @media (max-width: 860px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+  .card { background: var(--surface); border: 1.5px solid var(--line); border-radius: 16px; padding: 18px; min-width: 0; }
+  .card h2 { font-size: 18px; font-weight: 800; margin-bottom: 4px; }
+  .hint { font-size: 13px; color: var(--muted); line-height: 1.5; margin-bottom: 12px; }
+  .field { margin-bottom: 14px; }
+  .field label { display: flex; justify-content: space-between; gap: 10px; font-size: 13.5px; font-weight: 700; margin-bottom: 6px; }
+  .field label output { font-family: var(--mono); color: var(--cyan); white-space: nowrap; }
+  .field .ceil { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  input[type="range"] { width: 100%; accent-color: var(--cyan); }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  input[type="number"] { width: 100%; font: 600 14px var(--mono); padding: 9px 10px; border-radius: 9px; border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); }
+  .sub-l { font-size: 11.5px; color: var(--muted); display: block; margin-bottom: 4px; font-weight: 600; }
+  .real { background: var(--amber-soft); border-radius: 12px; padding: 12px; }
+  .real label output { color: var(--amber); }
+  .row-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  button.btn { font: 700 13.5px var(--sans); padding: 10px 14px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+  button.btn.primary { background: var(--cyan); border-color: var(--cyan); color: #fff; }
+  .kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+  .kpi { border-radius: 12px; padding: 12px 14px; border: 1.5px solid var(--line); }
+  .kpi .lbl { font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: .06em; color: var(--muted); text-transform: uppercase; }
+  .kpi .val { font-family: var(--mono); font-size: 26px; font-weight: 700; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .kpi .sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .kpi.h { background: var(--cyan-soft); } .kpi.h .val { color: var(--cyan); }
+  .kpi.d { background: var(--leaf-soft); } .kpi.d .val { color: var(--leaf); }
+  .kpi.f { background: var(--bg); }
+  .kpi.c { background: var(--amber-soft); } .kpi.c .val { color: var(--amber); }
+  .wf { display: grid; grid-template-columns: minmax(0, 1fr) 110px; gap: 6px 12px; align-items: center; margin: 6px 0; font-size: 13.5px; }
+  .wf .name { font-weight: 700; }
+  .wf .hrs { font-family: var(--mono); text-align: right; font-weight: 700; }
+  .wf .bar { grid-column: 1 / -1; height: 10px; border-radius: 999px; background: var(--line); overflow: hidden; position: relative; }
+  .wf .bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px; }
+  .wf .bar .ceilb { background: rgba(8,145,178,.25); }
+  .wf .bar .realb { background: var(--cyan); }
+  
+  .note { font-size: 12.5px; color: var(--muted); line-height: 1.5; margin-top: 12px; padding: 10px 12px; border-left: 4px solid var(--line); background: var(--bg); border-radius: 0 8px 8px 0; }
+  .gate { border: 1.5px solid var(--line); border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; }
+  .gate h3 { font-size: 15px; font-weight: 800; }
+  .gate p { font-size: 13px; color: var(--muted); margin: 3px 0 10px; line-height: 1.45; }
+  .seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .seg button { font: 700 12.5px var(--sans); padding: 9px 6px; border-radius: 8px; border: 1.5px solid var(--line); background: var(--surface); color: var(--muted); cursor: pointer; }
+  .seg button.on[data-val="0"] { background: var(--red-soft); border-color: var(--red); color: var(--red); }
+  .seg button.on[data-val="1"] { background: var(--amber-soft); border-color: var(--amber); color: var(--amber); }
+  .seg button.on[data-val="2"] { background: var(--leaf-soft); border-color: var(--leaf); color: var(--leaf); }
+  .dial-wrap { text-align: center; }
+  .dial-pct { font: 700 46px var(--mono); margin-top: -64px; }
+  .band { display: inline-block; margin-top: 8px; font-weight: 800; padding: 8px 14px; border-radius: 999px; font-size: 14px; }
+  .band.b0 { background: var(--red-soft); color: var(--red); } .band.b1 { background: var(--amber-soft); color: var(--amber); } .band.b2 { background: var(--leaf-soft); color: var(--leaf); }
+  .next { text-align: left; margin-top: 16px; font-size: 13.5px; line-height: 1.55; }
+  .next li { margin: 0 0 6px 18px; }
+  .msg { font-size: 12.5px; margin-top: 8px; color: var(--muted); min-height: 18px; }
+  footer { margin-top: 32px; font-size: 12.5px; color: var(--muted); line-height: 1.6; border-top: 1px solid var(--line); padding-top: 14px; }
+  @media print { .tabs, .row-btns { display: none; } .panel { display: block !important; } }
+</style>
+</head>
+<body>
+<style>
+  .wfrow { display: grid; grid-template-columns: minmax(0, 1fr) 84px 84px; gap: 6px; align-items: center; margin-bottom: 8px; }
+  .wfrow.head { font: 700 11px var(--mono); letter-spacing: .05em; color: var(--muted); margin-bottom: 4px; }
+  .wfrow .nm { font-size: 13.5px; font-weight: 700; }
+  .wfrow .nm small { display: block; font-weight: 500; font-size: 11.5px; color: var(--muted); }
+  .wfrow input { width: 100%; font: 600 13.5px var(--mono); padding: 8px 9px; border-radius: 8px; border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); min-width: 0; }
+  .bars { margin-top: 6px; }
+  .bars .b { display: grid; grid-template-columns: minmax(0, 1fr) 80px; gap: 4px 10px; font-size: 13px; margin: 7px 0; }
+  .bars .b .t { font-weight: 700; }
+  .bars .b .h { font-family: var(--mono); text-align: right; font-weight: 700; }
+  .bars .b .track { grid-column: 1 / -1; height: 10px; border-radius: 999px; background: var(--line); position: relative; overflow: hidden; }
+  .bars .b .track i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px; }
+  .bars .ceil { background: rgba(5,150,105,.25); } .bars .real { background: var(--leaf); }
+  @media (max-width: 600px) { .wfrow { grid-template-columns: minmax(0, 1fr) 64px 64px; } }
+</style>
+<div class="container">
+  <header>
+    <div class="eyebrow">COMPANION TOOL • AI IN FINANCE, DONE RIGHT • A3C</div>
+    <h1>Audit Hours-Back Calculator</h1>
+    <p>A3C, a 70-person audit firm, made PDF-heavy work 5x faster by putting AI inside the Excel workbooks it already used. Mid-size peers report similar gains on matching, footing and version checks. Use this page to estimate the hours your firm could get back, discounted to a level you trust, and what that capacity means in extra engagements.</p>
+  </header>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" id="tab-btn-1" role="tab" aria-selected="true" data-tab="1">1 · Hours back</button>
+    <button class="tab" id="tab-btn-2" role="tab" aria-selected="false" data-tab="2">2 · Tool due diligence</button>
+  </div>
+
+  <section class="panel active" id="panel-1">
+    <div class="grid">
+      <div class="card">
+        <h2>Your firm</h2>
+        <div class="hint">Demo figures are made up. Replace them with your own.</div>
+        <div class="field pair">
+          <div><span class="sub-l">Engagements a year</span><input type="number" id="in-eng" min="0" step="5" /></div>
+          <div><span class="sub-l">Average total hours per engagement</span><input type="number" id="in-avg" min="0" step="5" /></div>
+        </div>
+        <div class="field"><span class="sub-l">Blended staff cost per hour ($)</span><input type="number" id="in-rate" min="0" step="5" /></div>
+        <div class="wfrow head"><span>HOURS PER ENGAGEMENT ON…</span><span>HOURS</span><span>% SAVED</span></div>
+        <div class="wfrow"><span class="nm">PDF form extraction<small>A3C: 5x faster → 80%</small></span><input type="number" id="in-h0" min="0" step="1" /><input type="number" id="in-p0" min="0" max="100" step="5" /></div>
+        <div class="wfrow"><span class="nm">Invoice-to-ledger matching<small>Focus on anomalies → 50%</small></span><input type="number" id="in-h1" min="0" step="1" /><input type="number" id="in-p1" min="0" max="100" step="5" /></div>
+        <div class="wfrow"><span class="nm">Footing and math checks<small>Squire: 10–20% of prior time → 80%</small></span><input type="number" id="in-h2" min="0" step="1" /><input type="number" id="in-p2" min="0" max="100" step="5" /></div>
+        <div class="wfrow"><span class="nm">Draft version compare<small>Accru Felsers: -50%</small></span><input type="number" id="in-h3" min="0" step="1" /><input type="number" id="in-p3" min="0" max="100" step="5" /></div>
+        <div class="field real">
+          <label for="in-real">Realization of vendor-reported gains <output id="out-real"></output></label>
+          <input type="range" id="in-real" min="10" max="100" step="5" />
+          <div class="ceil">Peer results come from vendor-published customer stories. Keep this at 50% or lower for a budget case.</div>
+        </div>
+        <div class="row-btns"><button class="btn" id="btn-reset">Reset demo figures</button></div>
+      </div>
+      <div class="card">
+        <h2>What you get back</h2>
+        <div class="hint">Light bars show the vendor-reported ceiling. Dark bars show your realization.</div>
+        <div class="kpis">
+          <div class="kpi d"><div class="lbl">Hours back per engagement</div><div class="val" id="kpi-per">–</div><div class="sub">After realization</div></div>
+          <div class="kpi h"><div class="lbl">Hours back a year</div><div class="val" id="kpi-hours">–</div><div class="sub">Across all engagements</div></div>
+          <div class="kpi c"><div class="lbl">Value at cost</div><div class="val" id="kpi-value">–</div><div class="sub">Hours × staff cost</div></div>
+          <div class="kpi f"><div class="lbl">Extra engagements</div><div class="val" id="kpi-extra">–</div><div class="sub">You could take on without hiring</div></div>
+        </div>
+        <div class="bars" id="bars"></div>
+        <div class="note">Estimates only. The hours only come back if the work actually moves into the workbook with source-linked evidence; start with one high-volume workflow and measure it.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-2">
+    <div class="grid">
+      <div class="card">
+        <h2>6 questions before you buy</h2>
+        <div class="hint">Rate the tool (or your rollout plan) honestly. Partial counts as half.</div>
+        <div id="gates"></div>
+      </div>
+      <div class="card dial-wrap">
+        <h2>Rollout readiness</h2>
+        <svg viewBox="0 0 240 140" width="100%" style="max-width:320px">
+          <path d="M20 120 A100 100 0 0 1 220 120" fill="none" stroke="var(--line)" stroke-width="18" stroke-linecap="round" />
+          <path id="dial-arc" d="M20 120 A100 100 0 0 1 220 120" fill="none" stroke="var(--amber)" stroke-width="18" stroke-linecap="round" pathLength="100" stroke-dasharray="0 100" />
+        </svg>
+        <div class="dial-pct" id="sc-pct">50%</div>
+        <div class="band b1" id="sc-band">Pilot one workflow first</div>
+        <ol class="next" id="sc-next"></ol>
+        <div class="row-btns" style="justify-content:center">
+          <button class="btn primary" id="btn-copy">Copy rollout plan</button>
+          <button class="btn" id="btn-print">Print / save PDF</button>
+        </div>
+        <div class="msg" id="copy-msg"></div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    Built as a companion to an edition of the LinkedIn newsletter <b>AI in Finance, Done Right</b>, on A3C's Excel-native audit AI rollout. Demo figures are examples and the savings presets come from vendor-published customer stories; results are estimates, not a forecast. Everything runs in your browser and nothing is uploaded.
+  </footer>
+</div>
+
+<script>
+(function () {
+  const DEMO = { eng: 120, avg: 120, rate: 70, real: 50, h: [10, 8, 6, 4], p: [80, 50, 80, 50] };
+  const NAMES = ['PDF form extraction', 'Invoice-to-ledger matching', 'Footing and math checks', 'Draft version compare'];
+  const GATES = [
+    ['Works inside existing workbooks', 'No rebuilding every template from scratch.'],
+    ['Every figure linked to its source', 'A reviewer can click from a cell to the document it came from.'],
+    ['Action-level activity log', 'A review trail for audit documentation, for example under PCAOB AS 1215.'],
+    ['AI usage and spend visible', 'Admins can see who uses what, and what it costs.'],
+    ['One high-volume bottleneck first', 'The rollout starts where gains show on day one.'],
+    ['New hires trained from week one', 'Traceable habits form before manual ones do.']
+  ];
+  const LABELS = ['No', 'Partial', 'Yes'];
+  const $ = (id) => document.getElementById(id);
+  const num = (id) => { const v = parseFloat($(id).value); return isFinite(v) && v > 0 ? v : 0; };
+  const usd = (v) => '$' + Math.round(Number(v.toFixed(2))).toLocaleString('en-US');
+  const hrs = (v) => (Math.round(v * 10) / 10).toLocaleString('en-US', { maximumFractionDigits: 1 }) + ' hrs';
+
+  function setDemo() {
+    $('in-eng').value = DEMO.eng; $('in-avg').value = DEMO.avg; $('in-rate').value = DEMO.rate; $('in-real').value = DEMO.real;
+    for (let i = 0; i < 4; i++) { $('in-h' + i).value = DEMO.h[i]; $('in-p' + i).value = DEMO.p[i]; }
+  }
+  function compute() {
+    const real = num('in-real') / 100;
+    const rows = NAMES.map((n, i) => {
+      const ceil = num('in-h' + i) * Math.min(100, num('in-p' + i)) / 100;
+      return { n, ceil, real: ceil * real };
+    });
+    const per = rows.reduce((s, r) => s + r.real, 0);
+    const year = per * num('in-eng');
+    const avg = num('in-avg');
+    return { rows, real, per, year, value: year * num('in-rate'), extra: avg > 0 ? Math.floor(year / avg + 1e-9) : null };
+  }
+  function render() {
+    const r = compute();
+    $('out-real').textContent = Math.round(r.real * 100) + '%';
+    $('kpi-per').textContent = hrs(r.per);
+    $('kpi-hours').textContent = Math.round(r.year).toLocaleString('en-US') + ' hrs';
+    $('kpi-value').textContent = usd(r.value);
+    $('kpi-extra').textContent = r.extra === null ? '–' : String(r.extra);
+    const max = Math.max(1, ...r.rows.map((x) => x.ceil));
+    $('bars').innerHTML = r.rows.map((x) => `
+      <div class="b"><span class="t">${x.n}</span><span class="h">${hrs(x.real)}</span>
+        <span class="track"><i class="ceil" style="width:${(x.ceil / max * 100).toFixed(1)}%"></i><i class="real" style="width:${(x.real / max * 100).toFixed(1)}%"></i></span></div>`).join('');
+    window.__lastHours = r;
+  }
+
+  const vals = GATES.map(() => 1);
+  function renderGates() {
+    $('gates').innerHTML = GATES.map(([t, d], i) => `
+      <div class="gate"><h3>${i + 1}. ${t}</h3><p>${d}</p>
+        <div class="seg">${LABELS.map((l, v) => `<button data-idx="${i}" data-val="${v}" class="${vals[i] === v ? 'on' : ''}" aria-pressed="${vals[i] === v}">${l}</button>`).join('')}</div>
+      </div>`).join('');
+  }
+  function score() {
+    const p = Math.round(vals.reduce((s, v) => s + v, 0) / (GATES.length * 2) * 100);
+    $('sc-pct').textContent = p + '%';
+    const arc = $('dial-arc');
+    arc.setAttribute('stroke-dasharray', `${p} 100`);
+    const band = p >= 80 ? 2 : p >= 50 ? 1 : 0;
+    arc.setAttribute('stroke', ['var(--red)', 'var(--amber)', 'var(--leaf)'][band]);
+    const b = $('sc-band');
+    b.className = 'band b' + band;
+    b.textContent = ['Expect a stalled rollout', 'Pilot one workflow first', 'Ready to roll out firm-wide'][band];
+    const gaps = GATES.map((g, i) => [g[0], vals[i]]).filter(([, v]) => v < 2).sort((a, c) => a[1] - c[1]).slice(0, 3);
+    $('sc-next').innerHTML = gaps.length
+      ? gaps.map(([t, v]) => `<li><b>${t}</b>: ${v === 0 ? 'not in place. Ask the vendor or fix it before rollout.' : 'partly there. Get it in writing.'}</li>`).join('')
+      : '<li>All six are in place. Roll out workflow by workflow and measure each one.</li>';
+    return p;
+  }
+
+  function memo() {
+    const p = score();
+    const r = window.__lastHours;
+    const lines = ['AUDIT AI ROLLOUT PLAN', ''];
+    if (r) lines.push(
+      `At ${Math.round(r.real * 100)}% of vendor-reported gains: ${hrs(r.per)} back per engagement, ${Math.round(r.year).toLocaleString('en-US')} hours a year, ${usd(r.value)} at cost${r.extra === null ? '' : `, room for ${r.extra} more engagements without hiring`}.`,
+      ...r.rows.map((x) => `- ${x.n}: ${hrs(x.real)} per engagement`), '');
+    lines.push(`Tool and rollout readiness: ${p}% (${$('sc-band').textContent})`, ...GATES.map((g, i) => `- ${g[0]}: ${LABELS[vals[i]]}`), '',
+      'Principle: meet auditors where they work, and keep every figure linked to its source. Estimates only.');
+    return lines.join('\n');
+  }
+
+  function selectTab(n) {
+    [1, 2].forEach((k) => {
+      $('tab-btn-' + k).setAttribute('aria-selected', String(k === n));
+      $('panel-' + k).classList.toggle('active', k === n);
+    });
+  }
+
+  document.querySelectorAll('.tab').forEach((b) => b.addEventListener('click', () => selectTab(Number(b.dataset.tab))));
+  document.querySelectorAll('#panel-1 input').forEach((el) => el.addEventListener('input', render));
+  $('btn-reset').addEventListener('click', () => {
+    setDemo();
+    for (let i = 0; i < vals.length; i++) vals[i] = 1;
+    renderGates(); score(); render();
+  });
+  $('gates').addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-idx]');
+    if (!btn) return;
+    vals[Number(btn.dataset.idx)] = Number(btn.dataset.val);
+    renderGates(); score();
+  });
+  $('btn-copy').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(memo()); $('copy-msg').textContent = 'Plan copied to clipboard.'; }
+    catch { $('copy-msg').textContent = 'Your browser blocked the clipboard. Use Print / save PDF instead.'; }
+  });
+  $('btn-print').addEventListener('click', () => window.print());
+
+  setDemo(); renderGates(); score(); render();
+})();
+</script>
+</body>
+</html>
